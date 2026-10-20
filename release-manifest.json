@@ -1,0 +1,10 @@
+{
+  "version": "0.3.0",
+  "sourceRevision": "28b9b893992230abc7b44b9f80ca36316a8e443f",
+  "assets": {
+    "README.md": "68aadd47cd3d37f3fe7ad1643805fb20c4808811845c16ce13fe507144a6e21c",
+    "install.sh": "5ead268d8fbe18452c44472ffa635b58e5eb5158d8d8c2ec14dadd83301b4bc0",
+    "playground-harness-0.3.0.zip": "b9c39c2c97fafe54430abcf15894f6b8902d2398d0516ce10fda5df89cce2ae8",
+    "playground-harness-0.3.0.zip.sha256": "490e7ca033311a6c56ef10f97812b5bbe98199d1f74ae9d89d29111416e9c081"
+  }
+}
