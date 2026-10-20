@@ -6,7 +6,7 @@
 
 Codex CLI와 Claude Code에서 사용하는 **BENOW Playground 앱 제작 도구**
 
-[빠른 시작](#빠른-시작) · [사용 예시](#이렇게-요청하세요) · [설치 옵션](#설치-옵션) · [릴리스](https://github.com/BENOW-HQ/beplay/releases) · [보안 정책](SECURITY.md)
+[macOS](#macos-설치) · [Windows](#windows-설치) · [For LLM](#for-llm) · [사용 예시](#이렇게-요청하세요) · [설치 옵션](#설치-옵션) · [릴리스](https://github.com/BENOW-HQ/beplay/releases) · [보안 정책](SECURITY.md)
 
 </div>
 
@@ -32,30 +32,83 @@ Codex CLI와 Claude Code에서 사용하는 **BENOW Playground 앱 제작 도구
 
 ## 빠른 시작
 
-### 1. 준비하기
+**내 운영체제의 안내만 따라 하면 됩니다.** Codex CLI 또는 Claude Code는 먼저 설치해 두세요. beplay는 두 도구에 사용할 스킬을 설치합니다.
 
-- **Bun 1.4 이상** — `bun --version`으로 확인
-- 사용할 **Codex CLI** 또는 **Claude Code**
-- macOS / POSIX 셸의 `curl`, `unzip`, `shasum` 또는 `sha256sum`
+[macOS 설치](#macos-설치) · [Windows 설치](#windows-설치) · [설치 후 시작하기](#설치-후-시작하기) · [AI에게 설치 맡기기](#for-llm)
 
-설치기는 Bun이나 AI 호스트를 자동 설치하지 않습니다. Windows는 [아래 수동 설치](#windows--수동-설치)를 사용하세요.
+### macOS 설치
 
-### 2. 작업 폴더에서 한 줄 설치
-
-앱 파일을 보관할 폴더로 이동한 뒤 실행합니다.
+**① 터미널을 열고 Bun을 확인하세요.**
 
 ```sh
+bun --version
+```
+
+`1.4.0` 이상이면 다음 단계로 넘어갑니다. Bun이 없다면 아래 [공식 설치 명령](https://bun.sh/docs/installation)을 실행한 뒤 터미널을 새로 열고 버전을 확인하세요. 이미 설치된 구버전은 기존 설치 방식으로 업데이트하세요.
+
+```sh
+curl -fsSL https://bun.com/install | bash
+```
+
+**② 앱을 만들 폴더에서 설치하세요.** 아래는 홈 폴더에 `beplay-workspace`를 만들고 두 스킬을 설치하는 예시입니다. 기존 프로젝트에 설치하려면 첫 두 줄 대신 그 폴더로 이동하세요.
+
+```sh
+mkdir -p "$HOME/beplay-workspace"
+cd "$HOME/beplay-workspace"
 curl --proto '=https' --proto-redir '=https' -fsSL https://github.com/BENOW-HQ/beplay/releases/download/v0.3.0/install.sh | sh
 ```
 
-**Codex CLI와 Claude Code 스킬을 한 번에 설치합니다.** 관리자 권한은 필요하지 않으며, 전역 PATH나 셸 설정은 바꾸지 않습니다.
+마지막에 `beplay install complete`가 나오면 완료입니다. 설치 중 `curl`, `unzip`, `shasum` 누락이 표시되면 해당 도구를 준비한 뒤 같은 폴더에서 다시 실행하세요.
 
-| 호스트 | 현재 작업 폴더에 생성되는 스킬 |
+### Windows 설치
+
+**① PowerShell을 열고 Bun을 확인하세요.** 명령 프롬프트(cmd)가 아닌 **PowerShell**에서 실행합니다.
+
+```powershell
+bun --version
+```
+
+`1.4.0` 이상이면 다음 단계로 넘어갑니다. Bun이 없다면 아래 [공식 설치 명령](https://bun.sh/docs/installation)을 실행한 뒤 PowerShell을 새로 열고 버전을 확인하세요. 이미 설치된 구버전은 기존 설치 방식으로 업데이트하세요.
+
+```powershell
+powershell -c "irm bun.sh/install.ps1|iex"
+```
+
+**② 아래 블록을 통째로 복사해 실행하세요.** 홈 폴더에 `beplay-workspace`를 만들고, 공개 ZIP 다운로드 → 체크섬 확인 → 두 스킬 설치까지 수행합니다. 기존 프로젝트에 설치하려면 `$beplayWorkspace` 값만 그 폴더의 절대 경로로 바꾸세요.
+
+```powershell
+$ErrorActionPreference = 'Stop'
+$beplayWorkspace = Join-Path $env:USERPROFILE 'beplay-workspace'
+New-Item -ItemType Directory -Force -Path $beplayWorkspace | Out-Null
+Set-Location -LiteralPath $beplayWorkspace
+$beplayTemp = Join-Path ([IO.Path]::GetTempPath()) ('beplay-' + [guid]::NewGuid())
+New-Item -ItemType Directory -Path $beplayTemp | Out-Null
+try {
+    $beplayZip = Join-Path $beplayTemp 'package.zip'
+    Invoke-WebRequest -UseBasicParsing -Uri 'https://github.com/BENOW-HQ/beplay/releases/download/v0.3.0/playground-harness-0.3.0.zip' -OutFile $beplayZip
+    if ((Get-FileHash -LiteralPath $beplayZip -Algorithm SHA256).Hash -ne 'b9c39c2c97fafe54430abcf15894f6b8902d2398d0516ce10fda5df89cce2ae8') {
+        throw '다운로드 검증 실패: 설치를 중단합니다.'
+    }
+    $beplayPackage = Join-Path $beplayTemp 'package'
+    Expand-Archive -LiteralPath $beplayZip -DestinationPath $beplayPackage
+    bun (Join-Path $beplayPackage 'beplay.js') setup --operation install --workspace $beplayWorkspace --host all --source $beplayPackage --json
+    if ($LASTEXITCODE -ne 0) { throw '설치에 실패했습니다. 위 오류를 확인하세요.' }
+    Write-Host 'beplay install complete'
+} finally {
+    Remove-Item -LiteralPath $beplayTemp -Recurse -Force
+}
+```
+
+`beplay install complete`가 나오면 완료입니다. Windows에서 앱 미리보기와 썸네일까지 사용하려면 Chrome 또는 Chromium도 필요합니다. 실행 정책을 변경하거나 관리자 PowerShell을 열 필요는 없습니다.
+
+### 설치 후 시작하기
+
+두 운영체제 모두 설치한 작업 폴더에 다음 스킬이 생깁니다.
+
+| 호스트 | 설치 위치 |
 | :--- | :--- |
 | Codex CLI | `.agents/skills/playground-app/` |
 | Claude Code | `.claude/skills/playground-app/` |
-
-### 3. AI에게 요청하기
 
 같은 폴더에서 `codex` 또는 `claude`를 새로 실행하고 **대화창**에 입력하세요.
 
@@ -71,7 +124,7 @@ $playground-app beplay create 우리 팀 체크리스트 앱을 만들어줘. �
 /playground-app beplay create 우리 팀 체크리스트 앱을 만들어줘. 할 일을 추가하고 완료 표시할 수 있게 해줘. 검사와 미리보기까지 진행하고 아직 게시하지 마.
 ```
 
-도움말은 각각 `$playground-app beplay help`, `/playground-app beplay help`로 확인할 수 있습니다.
+도움말은 각각 `$playground-app beplay help`, `/playground-app beplay help`로 확인할 수 있습니다. beplay 설치기는 전역 PATH와 셸 설정을 변경하지 않습니다. 별도로 실행한 Bun 공식 설치기는 Bun 환경을 구성할 수 있습니다.
 
 ## 이렇게 요청하세요
 
@@ -139,16 +192,68 @@ curl --proto '=https' --proto-redir '=https' -fsSL https://github.com/BENOW-HQ/b
 
 </details>
 
-### Windows / 수동 설치
+## For LLM
 
-[v0.3.0 ZIP 다운로드](https://github.com/BENOW-HQ/beplay/releases/download/v0.3.0/playground-harness-0.3.0.zip) 후 PowerShell에서 실행합니다. `--workspace`에는 앱을 만들 작업 폴더를 지정하세요.
+### AI에게 설치 맡기기
 
-```powershell
-Expand-Archive .\playground-harness-0.3.0.zip .\playground-harness
-bun .\playground-harness\beplay.js setup --operation install --workspace . --host all --source .\playground-harness --json
+Codex CLI나 Claude Code에 아래 요청을 전달하세요. AI가 터미널을 실행할 수 있는 환경이어야 합니다.
+
+```text
+https://github.com/BENOW-HQ/beplay/blob/main/README.md 의 For LLM 섹션을 읽고,
+현재 작업 폴더에 beplay를 설치해줘.
+운영체제와 Bun 버전을 확인하고 Codex CLI·Claude Code 스킬을 둘 다 설치한 뒤,
+설치된 실행기의 도움말과 진단 결과까지 검증해줘.
+기존 파일은 보존하고, 앱 생성이나 게시는 하지 마.
 ```
 
-Bun 1.4 이상이 필요하며, Windows 미리보기·썸네일에는 로컬 Chrome 또는 Chromium이 필요합니다. 설치 후 AI 대화창의 호출 방법은 동일합니다.
+### Agent installation protocol
+
+When the user requests installation, carry out the steps below with your available terminal tools. If you cannot execute commands, say so and provide the matching OS instructions; do not claim installation succeeded.
+
+**1. Resolve the environment and target.**
+
+- Detect the actual OS and shell. Use the macOS/POSIX installer on macOS and the PowerShell ZIP flow on native Windows. WSL installs into the WSL environment; do not describe that as a native Windows installation.
+- Use the user's selected workspace, or the current project directory if unambiguous. Ask only when the target is unclear. Do not install into the skill directory, filesystem root, or a guessed home directory. The home workspace in the human examples is only an example.
+- Check `bun --version`; require 1.4.0 or later. If missing, use the official Bun instructions linked above within the user's authorization and the host's approval rules. Preserve an existing runtime installation method when upgrading. Do not install a second package-manager copy or disable sandbox/PowerShell policies to proceed.
+- Check required download/extraction tools and whether `codex` / `claude` is available. Missing host CLIs do not prevent installing their skills, but report which host can actually be launched. Installing the host applications themselves is separate from installing beplay skills.
+
+**2. Install the pinned release in the selected workspace.**
+
+| Contract | Value |
+| :--- | :--- |
+| Version | `0.3.0` |
+| Release | `https://github.com/BENOW-HQ/beplay/releases/tag/v0.3.0` |
+| POSIX bootstrap | `https://github.com/BENOW-HQ/beplay/releases/download/v0.3.0/install.sh` |
+| ZIP | `https://github.com/BENOW-HQ/beplay/releases/download/v0.3.0/playground-harness-0.3.0.zip` |
+| ZIP SHA-256 | `b9c39c2c97fafe54430abcf15894f6b8902d2398d0516ce10fda5df89cce2ae8` |
+| Bootstrap SHA-256 | `5ead268d8fbe18452c44472ffa635b58e5eb5158d8d8c2ec14dadd83301b4bc0` |
+| Host selection | `all` (both skills), unless the user explicitly selects one |
+
+- macOS: use the command in [macOS 설치](#macos-설치), passing `--workspace` when needed. For file-based execution, download `install.sh` to a unique temporary path, verify its SHA-256 above, then run `sh <downloaded-file> --workspace <absolute-workspace> --host all`. The bootstrap verifies the ZIP before installation.
+- Windows: use the complete block in [Windows 설치](#windows-설치), replacing only the workspace selection with the user's target. Verify the ZIP before extracting or executing it, check Bun's exit code, and remove only the temporary folder created by this attempt.
+- Use the public release without GitHub tokens, company cookies, or production credentials. Do not guess a `latest` installer, different version, or checksum. If the download/hash fails, stop and report the exact failed step.
+- Preserve existing apps, `.beplay` sessions, and unrelated skills. A different installed package or `INSTALL_CONFLICT` is not permission to delete files or receipts. Use `update` only when the user requested an update; do not downgrade a newer installation. Do not use `--adopt` or force an overwrite to make installation pass.
+
+**3. Verify the installation from the selected workspace.**
+
+Run these commands and require successful exits. They read local state and do not create or publish an app.
+
+```sh
+bun .agents/skills/playground-app/bin/beplay.js help --json
+bun .claude/skills/playground-app/bin/beplay.js help --json
+bun .agents/skills/playground-app/bin/beplay.js setup --operation diagnose --workspace . --host all --json
+```
+
+The same commands work in PowerShell. For an explicitly selected single host, run only that host's help and diagnose commands.
+
+- Both help results must report `event: "help"` and the same command list.
+- Diagnose must report `event: "setup.diagnosed"` and `runtime.supported: true`. Host executable paths may be null; disclose this rather than claiming those applications are installed.
+- Confirm each selected host has `SKILL.md` and `bin/beplay.js`, and `.beplay/integrations/codex.json` / `claude.json` exists for the corresponding installation.
+- CLI help success proves the installed runner works. It does not prove the host selected the skill or that company login works. Ask the user to start a new host session and invoke `$playground-app beplay help` or `/playground-app beplay help` when host discovery cannot be checked directly.
+
+**4. Report the result and stop.**
+
+Return the workspace, release version, selected hosts, checks actually run, and the next chat invocation. Distinguish installed skills from available host applications. Installation alone does not authorize app creation, browser login, publication, or modification of existing company apps.
 
 ## 배포와 보안
 
